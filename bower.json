@@ -1,0 +1,11 @@
+{
+  "name": "Dungeon Fighter",
+  "version": "0.0.1",
+  "description": "Examples that show what each of the Polymer 2.0 mixins do",
+  "license": "MIT",
+  "dependencies": {
+    "polymer": "Polymer/polymer#^2.0.0",
+    "paper-slider": "PolymerElements/paper-slider#^2.0.0",
+    "paper-button": "PolymerElements/paper-button#^2.0.0"
+  }
+}
