@@ -22,7 +22,7 @@
     <script>
       AFRAME.registerComponent('thing', {
         init: function () {
-          if (johnDebug) {
+          if (window.johnDebug) {
             this.el.setAttribute('geometry', {primitive:'box', width:0.01, depth:0.01, height:1});
             this.el.setAttribute('position', {y:0.5});  
           }
@@ -40,7 +40,13 @@
     <a-scene ar>
       <!-- When we have a raycaster hit, we use this ball to show where. -->
       <a-sphere id="ball" radius="0.01" position="0 0.005 -0.5"></a-sphere>
-
+      
+      <a-assets>
+        <a-asset-item id="dice-obj" src="https://cdn.glitch.com/4bb2aa19-b5ca-49c7-8a0d-97dd920ef037%2Fdice.obj?1509565004898"></a-asset-item>
+        <a-asset-item id="dice-mtl" src="https://cdn.glitch.com/4bb2aa19-b5ca-49c7-8a0d-97dd920ef037%2Fdice.mtl?1509565004919"></a-asset-item>
+      </a-assets>
+      <a-entity id="original-dice" class="dice" obj-model="obj: #dice-obj; mtl: #dice-mtl" position="0 0.005 -0.5" scale="0.1 0.1 0.1"></a-entity>
+      
       <a-camera>
         <!-- A hit from AR, rather than A-Frame objects, hits this entity. -->
         <a-entity id="ar-world"></a-entity>
@@ -70,18 +76,15 @@
     
     
     <script>
-      /*
-      document.querySelector('a-entity[camera]').addEventListener('componentchanged', function (evt) {
+      var cameraPosition = {x: 0, y: 100, z: 100} ;
+      
+      document.querySelector('a-camera').addEventListener('componentchanged', function (evt) {
         if (evt.detail.name === 'position') {
-          console.log(evt.detail.newData);
-          
-          document.querySelector('#dice').setAttribute('position', evt.detail.newData);
+          cameraPosition = evt.detail.newData;
         }
       });
-      */
       
       var sc = document.querySelector('a-scene');
-      function showHUD(msg) { sc.querySelector('#hud').setAttribute('value', msg); }
       
       function addARRaycasterListeners() {
         var raycaster = sc.querySelector('[ar-raycaster]');
@@ -113,34 +116,7 @@
         var tempScale = new THREE.Vector3();
         var tempMat4 = new THREE.Matrix4();
         
-        window.addEventListener('click', function() {
-          // If the cursor has an intersection, place a marker.
-          var cursor = sc.querySelector('[ar-raycaster]').components.cursor;
-          if (cursor.intersection) {
-            var marker = document.createElement('a-box');
-            marker.setAttribute('width', 0.01);
-            marker.setAttribute('depth', 0.01);
-            marker.setAttribute('height', 1);
-            marker.setAttribute('color', 'orange');
-            marker.setAttribute('position', {
-              x: cursor.intersection.point.x, 
-              y: cursor.intersection.point.y + 0.5, 
-              z: cursor.intersection.point.z});
-            sc.appendChild(marker);         
-          }
-          
-          // Show plane info on click.
-          // (may not have arDisplay until tick after loaded)
-          var ardisplay = sc.components['three-ar'].arDisplay;
-          if (!ardisplay) { showHUD('no ardisplay?'); } else {
-            // Old versions of WebARonARKit don't expose getPlanes() correctly.
-            var planes = ardisplay.getPlanes ? ardisplay.getPlanes() : ardisplay.anchors_;
-
-            var keys = Object.keys(sc.components['three-ar-planes'].planes);
-            var msg = planes.length + ' (vs. ' + keys.length + ': ' + keys.join(',') + ')\n\n';
-            showHUD(msg);
-          }
-        });
+        window.addEventListener('click', clickListener);
         
         addEventListeners();
       }

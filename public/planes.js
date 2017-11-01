@@ -1,6 +1,6 @@
 var randomColors = ['red', 'orange', /* 'yellow', */ 'green', 'blue', 'violet'];
 
-var johnDebug = true;
+window.johnDebug = false;
 var raycasterUpdateNeeded = false;
 var raycasterInterval;
 
@@ -20,11 +20,11 @@ function raycasterNeedsUpdate() {
 
 function createGameBoard() {
   return '<a-box width="0.1" height="0.1" depth="0.1" position="-0.25 0.125 -0.75" rotation="0 45 0" color="#EFEFEF" shadow></a-box>' +
-         '<a-cylinder position="0 0.0078 0" radius="0.20" height="0.001" color="#FF0000" shadow></a-cylinder>' +
-         '<a-cylinder position="0 0.0076 0" radius="0.40" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
-         '<a-cylinder position="0 0.0074 0" radius="0.60" height="0.001" color="#FF0000" shadow></a-cylinder>' +
-         '<a-cylinder position="0 0.0072 0" radius="0.80" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
-         '<a-cylinder position="0 0.0070 0" radius="1.00" height="0.001" color="#FF0000" shadow></a-cylinder>';
+         '<a-cylinder id="game-ring-5-pts" position="0 0.0078 0" radius="0.20" height="0.001" color="#FF0000" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-4-pts" position="0 0.0076 0" radius="0.40" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-3-pts" position="0 0.0074 0" radius="0.60" height="0.001" color="#FF0000" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-2-pts" position="0 0.0072 0" radius="0.80" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-1-pts" position="0 0.0070 0" radius="1.00" height="0.001" color="#FF0000" shadow></a-cylinder>';
 }
 
 var tempMat4 = new THREE.Matrix4();
@@ -70,7 +70,7 @@ function onUpdatedPlanes(evt) {
 
     // Fill out the plane label with informative text.
     // DETAIL: when creating, getAttribute doesn't work this tick
-    if (johnDebug) {
+    if (window.johnDebug) {
       plane.querySelector('.label').setAttribute('text', {
        width: dx, 
        height: dz, 
@@ -119,9 +119,9 @@ function onAddedPlanes(evt) {
       plane.setAttribute('id', 'plane_' + anchor.identifier);
       plane.setAttribute('class', 'plane');
       plane.setAttribute('height', 0.001);
-      plane.setAttribute('geometry', 'primitive: plane; height: 500; width: 500');
-      plane.setAttribute('material', 'shader:flat; src: url(https://cdn.glitch.com/4f6957bd-cb74-44f6-808c-17ff6a8fa316%2Fgrass.jpg?1509560768477);repeat: 300 300;');
-      //plane.setAttribute('material', 'shader:grid;interval:0.1;side:double;opacity:0.5;color:' + colorToUse);
+      //plane.setAttribute('geometry', 'primitive: plane;');
+      //plane.setAttribute('material', 'shader:flat; src: url(https://cdn.glitch.com/4f6957bd-cb74-44f6-808c-17ff6a8fa316%2Fgrass.jpg?1509560768477);repeat: 300 300;');
+      plane.setAttribute('material', 'shader:grid;interval:0.1;side:double;opacity:0.5;color:' + colorToUse);
 
       sc.appendChild(plane);
 
@@ -170,7 +170,7 @@ function onAddedPlanes(evt) {
     bbox.setAttribute('width', dx);
     bbox.setAttribute('depth', dz);
 
-    if (johnDebug) {
+    if (window.johnDebug) {
       // Fill out the plane label with informative text.
       // DETAIL: when creating, getAttribute doesn't work this tick
       plane.querySelector('.label').setAttribute('text', {
@@ -210,6 +210,10 @@ function onRemovedPlanes(evt) {
     var plane = sc.querySelector('#plane_' + anchor.identifier);
     if (plane && plane.parentElement) {
       plane.parentElement.removeChild(plane);
+      var dice = document.getElementsByClassName('dice').childNodes;
+      for (var i=dice.length; i>=0; i--) {
+        dice[i].parentNode.removeChild(dice[i]);
+      }
     }          
   });
 }            
@@ -221,3 +225,44 @@ function addPlaneListeners() {
   sc.addEventListener('anchorsupdated', onUpdatedPlanes);
   sc.addEventListener('anchorsremoved', onRemovedPlanes);
 }
+
+var numDice = 0;
+function clickListener() {
+  var sc = AFRAME.scenes[0];
+  // If the cursor has an intersection, place a marker.
+  var cursor = sc.querySelector('[ar-raycaster]').components.cursor;
+  if (cursor.intersection) {
+    var marker = document.getElementById('original-dice').cloneNode(true);
+    marker.setAttribute('id', 'dice-' + numDice);
+    marker.setAttribute('position', cameraPosition.x + ' ' + cameraPosition.y + ' ' + cameraPosition.z);
+    
+    var throwAnimation = document.createElement("a-animation");
+        throwAnimation.setAttribute("attribute","position");
+        throwAnimation.setAttribute("to", cursor.intersection.point.x + ' ' + (cursor.intersection.point.y + 0.05)  + ' ' + cursor.intersection.point.z);
+        throwAnimation.setAttribute("dur","1000");
+        throwAnimation.setAttribute("repeat","0");
+    marker.appendChild(throwAnimation);
+    
+    var rotateAnimation = document.createElement("a-animation");
+        rotateAnimation.setAttribute("attribute","rotation");
+        rotateAnimation.setAttribute("to","0 360 360");
+        rotateAnimation.setAttribute("dur","1000");
+    marker.appendChild(rotateAnimation);
+    
+    sc.appendChild(marker);         
+  }
+
+  /*
+  // Show plane info on click.
+  // (may not have arDisplay until tick after loaded)
+  var ardisplay = sc.components['three-ar'].arDisplay;
+  if (!ardisplay) { showHUD('no ardisplay?'); } else {
+    // Old versions of WebARonARKit don't expose getPlanes() correctly.
+    var planes = ardisplay.getPlanes ? ardisplay.getPlanes() : ardisplay.anchors_;
+
+    var keys = Object.keys(sc.components['three-ar-planes'].planes);
+    var msg = planes.length + ' (vs. ' + keys.length + ': ' + keys.join(',') + ')\n\n';
+    showHUD(msg);
+    */
+  }
+//function showHUD(msg) { sc.querySelector('#hud').setAttribute('value', msg); }
