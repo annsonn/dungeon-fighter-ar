@@ -7,7 +7,7 @@
     <script src="https://aframe.io/releases/0.6.1/aframe.min.js"></script>
     <script src="https://rawgit.com/google-ar/three.ar.js/master/dist/three.ar.js"></script>
     <script src="https://rawgit.com/chenzlabs/aframe-ar/master/dist/aframe-ar.js"></script>
-
+    <script src="https://cdn.rawgit.com/donmccurdy/aframe-extras/master/dist/aframe-extras.min.js"></script>
     <!-- Include XZ grid shader. -->
     <script src="grid-shader.js"></script>
 
@@ -27,7 +27,32 @@
             this.el.setAttribute('position', {y:0.5});  
           }
         }
-      });            
+      });
+      
+      AFRAME.registerComponent('force-pushable', {
+        schema: {
+          force: { default: 10 }
+        },
+        init: function () {
+          var forcePushEvent = new CustomEvent('force-push', {});
+          
+          this.pStart = new THREE.Vector3();
+          this.sourceEl = this.el.sceneEl.querySelector('[camera]');
+          this.el.addEventListener('force-push', this.forcePush.bind(this));
+        },
+        forcePush: function () {
+          var force,
+              el = this.el,
+              pStart = this.pStart.copy(this.sourceEl.getAttribute('position'));
+
+          // Compute direction of force, normalize, then scale.
+          force = el.body.position.vsub(pStart);
+          force.normalize();
+          force.scale(this.data.force, force);
+
+          el.body.applyImpulse(force, el.body.position);
+        }
+      });
     </script>    
 
     <!-- Include planes handling example code. -->
@@ -37,15 +62,9 @@
 
     </style> 
     
-    <a-scene ar>
+    <a-scene ar physics="friction: 0.1; restitution: 0.5; gravity:-9.8; iterations:100; debug: true">
       <!-- When we have a raycaster hit, we use this ball to show where. -->
-      <a-sphere id="ball" radius="0.01" position="0 0.005 -0.5"></a-sphere>
-      
-      <a-assets>
-        <a-asset-item id="dice-obj" src="https://cdn.glitch.com/4bb2aa19-b5ca-49c7-8a0d-97dd920ef037%2Fdice.obj?1509565004898"></a-asset-item>
-        <a-asset-item id="dice-mtl" src="https://cdn.glitch.com/4bb2aa19-b5ca-49c7-8a0d-97dd920ef037%2Fdice.mtl?1509565004919"></a-asset-item>
-      </a-assets>
-      <a-entity id="original-dice" class="dice" obj-model="obj: #dice-obj; mtl: #dice-mtl" position="0 0.005 -0.5" scale="0.1 0.1 0.1"></a-entity>
+      <a-sphere id="ball" radius="0.01" position="0 0.005 -0.5" dynamic-body="shape: box; mass: 0.1" force-pushable></a-sphere>
       
       <a-camera>
         <!-- A hit from AR, rather than A-Frame objects, hits this entity. -->
@@ -60,8 +79,9 @@
         <!-- Separate the cursor appearance.-->
         <a-entity position="0 0 -0.1"
                   scale="0.001 0.001 0.001"
-                  geometry="primitive: ring; radiusInner: 0.8; radiusOuter: 1" 
+                  geometry="primitive: ring; radiusInner: 0.0; radiusOuter: 1" 
                   material="color: yellow; shader: flat; transparent:true"></a-entity>
+      
         
         <!-- Heads-up text display. -->
         

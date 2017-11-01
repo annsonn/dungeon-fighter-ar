@@ -1,4 +1,4 @@
-var randomColors = ['red', 'orange', /* 'yellow', */ 'green', 'blue', 'violet'];
+var randomColors = ['lightred', 'white', 'lightgreen', 'lightblue'];
 
 window.johnDebug = false;
 var raycasterUpdateNeeded = false;
@@ -19,12 +19,12 @@ function raycasterNeedsUpdate() {
 }
 
 function createGameBoard() {
-  return '<a-box width="0.1" height="0.1" depth="0.1" position="-0.25 0.125 -0.75" rotation="0 45 0" color="#EFEFEF" shadow></a-box>' +
-         '<a-cylinder id="game-ring-5-pts" position="0 0.0078 0" radius="0.20" height="0.001" color="#FF0000" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-4-pts" position="0 0.0076 0" radius="0.40" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-3-pts" position="0 0.0074 0" radius="0.60" height="0.001" color="#FF0000" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-2-pts" position="0 0.0072 0" radius="0.80" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-1-pts" position="0 0.0070 0" radius="1.00" height="0.001" color="#FF0000" shadow></a-cylinder>';
+  return '<a-box width="0.1" height="0.1" depth="0.1" position="0 0.0078 0" rotation="0 45 0" color="#EFEFEF" shadow dynamic-body="shape: box; mass: 0.1" force-pushable></a-box>' +
+         '<a-cylinder id="game-ring-5-pts" position="0 0.0078 0" radius="0.20" height="0.001" color="#FF0000" static-body="shape: cylinder; cylinderAxis: y; mass: 5" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-4-pts" position="0 0.0076 0" radius="0.40" height="0.001" color="#d4d4d4" static-body="shape: cylinder; cylinderAxis: y; mass: 5" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-3-pts" position="0 0.0074 0" radius="0.60" height="0.001" color="#FF0000" static-body="shape: cylinder; cylinderAxis: y; mass: 5" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-2-pts" position="0 0.0072 0" radius="0.80" height="0.001" color="#d4d4d4" static-body="shape: cylinder; cylinderAxis: y; mass: 5" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-1-pts" position="0 0.0070 0" radius="1.00" height="0.001" color="#FF0000" static-body="shape: cylinder; cylinderAxis: y; mass: 5" shadow></a-cylinder>';
 }
 
 var tempMat4 = new THREE.Matrix4();
@@ -115,14 +115,12 @@ function onAddedPlanes(evt) {
       // Create and append the plane.
       created = true;
       colorToUse = randomColors[Math.floor(Math.random() * randomColors.length)];
-      plane = document.createElement('a-entity');
+      plane = document.createElement('a-plane');
       plane.setAttribute('id', 'plane_' + anchor.identifier);
       plane.setAttribute('class', 'plane');
       plane.setAttribute('height', 0.001);
-      //plane.setAttribute('geometry', 'primitive: plane;');
-      //plane.setAttribute('material', 'shader:flat; src: url(https://cdn.glitch.com/4f6957bd-cb74-44f6-808c-17ff6a8fa316%2Fgrass.jpg?1509560768477);repeat: 300 300;');
       plane.setAttribute('material', 'shader:grid;interval:0.1;side:double;opacity:0.5;color:' + colorToUse);
-
+      plane.setAttribute('static-body', "");
       sc.appendChild(plane);
 
       plane.insertAdjacentHTML('beforeend',                   
@@ -209,10 +207,10 @@ function onRemovedPlanes(evt) {
   evt.detail.anchors.forEach(function (anchor) {
     var plane = sc.querySelector('#plane_' + anchor.identifier);
     if (plane && plane.parentElement) {
-      plane.parentElement.removeChild(plane);
-      var dice = document.getElementsByClassName('dice').childNodes;
-      for (var i=dice.length; i>=0; i--) {
-        dice[i].parentNode.removeChild(dice[i]);
+      // plane.parentElement.removeChild(plane);
+      var dice = document.getElementsByClassName('dice');
+      while (dice.length > 0) {
+        dice[0].parentNode.removeChild(dice[0]);
       }
     }          
   });
@@ -232,14 +230,25 @@ function clickListener() {
   // If the cursor has an intersection, place a marker.
   var cursor = sc.querySelector('[ar-raycaster]').components.cursor;
   if (cursor.intersection) {
-    var marker = document.getElementById('original-dice').cloneNode(true);
-    marker.setAttribute('id', 'dice-' + numDice);
-    marker.setAttribute('position', cameraPosition.x + ' ' + cameraPosition.y + ' ' + cameraPosition.z);
+    var diceColour = randomColors[Math.floor(Math.random() * randomColors.length)];
+    var marker = document.createElement('a-box');
+    marker.setAttribute('class', "dice");
+    marker.setAttribute('width', "0.1");
+    marker.setAttribute('depth', "0.1");
+    marker.setAttribute('height', "0.1");
+    marker.setAttribute('dynamic-body', "shape: box; mass: 0.1");
+    market.setAttribute('force-pushable', "");
+    marker.setAttribute('color', diceColour);
+    marker.setAttribute('position', cameraPosition.x + ' ' + cameraPosition.y + ' ' + (cameraPosition.z + 0.2));
     
+    marker.dispatchEvent(new Event('force-push'));
+    
+    /**
     var throwAnimation = document.createElement("a-animation");
         throwAnimation.setAttribute("attribute","position");
-        throwAnimation.setAttribute("to", cursor.intersection.point.x + ' ' + (cursor.intersection.point.y + 0.05)  + ' ' + cursor.intersection.point.z);
+        throwAnimation.setAttribute("to", cursor.intersection.point.x + ' ' + cursor.intersection.point.y  + ' ' + cursor.intersection.point.z);
         throwAnimation.setAttribute("dur","1000");
+        throwAnimation.setAttribute("easing", "ease-in-out-cubic");
         throwAnimation.setAttribute("repeat","0");
     marker.appendChild(throwAnimation);
     
@@ -248,6 +257,7 @@ function clickListener() {
         rotateAnimation.setAttribute("to","0 360 360");
         rotateAnimation.setAttribute("dur","1000");
     marker.appendChild(rotateAnimation);
+    **/
     
     sc.appendChild(marker);         
   }
