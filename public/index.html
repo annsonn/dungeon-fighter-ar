@@ -4,34 +4,73 @@
     <meta charset="utf-8">
     <title>Dungeon Fighter AR</title>
     <meta name="description" content="Hello, World! • A-Frame three.ar.js">
-    <script src="bower_components/webcomponentsjs/webcomponents-loader.js" shadydom></script>
     <script src="https://aframe.io/releases/0.6.1/aframe.min.js"></script>
     <script src="https://rawgit.com/google-ar/three.ar.js/master/dist/three.ar.js"></script>
     <script src="https://rawgit.com/chenzlabs/aframe-ar/master/dist/aframe-ar.js"></script>
 
-    <link rel="import" href="/bower_components/paper-slider/paper-slider.html">
+    <!-- Include XZ grid shader. -->
+    <script src="grid-shader.js"></script>
+
+    <!-- Include polygon component. -->
+    <script src="polygon.js"></script>
+        
+    <!-- Prevent touch causing flicker on iOS. -->
+    <style> * { -webkit-tap-highlight-color: rgba(0,0,0,0); } </style>
   </head>
   <body>    
+    <!-- This is the thing we stick in the middle of planes we detect. -->
+    <script>
+      AFRAME.registerComponent('thing', {
+        init: function () {
+          if (johnDebug) {
+            this.el.setAttribute('geometry', {primitive:'box', width:0.01, depth:0.01, height:1});
+            this.el.setAttribute('position', {y:0.5});  
+          }
+        }
+      });            
+    </script>    
+
+    <!-- Include planes handling example code. -->
+    <script src="planes.js"></script>
+    
     <style>
-      #dice-controls {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-      }
+
     </style> 
     
     <a-scene ar>
-      <a-box id="dice" width="0.1" height="0.1" depth="0.1" rotation="0 45 0" color="#000000" shadow></a-box>
-      <a-cylinder position="0.25 0.0078 -0.75" radius="0.15" height="0.001" color="#FF0000" shadow></a-cylinder>
-      <a-cylinder position="0.25 0.0076 -0.75" radius="0.30" height="0.001" color="#FFFFFF" shadow></a-cylinder>
-      <a-cylinder position="0.25 0.0074 -0.75" radius="0.45" height="0.001" color="#FF0000" shadow></a-cylinder>
-      <a-cylinder position="0.25 0.0072 -0.75" radius="0.60" height="0.001" color="#FFFFFF" shadow></a-cylinder>
-      <a-cylinder position="0.25 0.0070 -0.75" radius="0.75" height="0.001" color="#FF0000" shadow></a-cylinder>
-    </a-scene>
+      <!-- When we have a raycaster hit, we use this ball to show where. -->
+      <a-sphere id="ball" radius="0.01" position="0 0.005 -0.5"></a-sphere>
+
+      <a-camera>
+        <!-- A hit from AR, rather than A-Frame objects, hits this entity. -->
+        <a-entity id="ar-world"></a-entity>
+        
+        <!-- Declare a cursor, and what objects its raycaster hit (including AR). -->
+        <!-- NOTE: ar-raycaster VRHit uses a "tolerance" fudge factor, so imprecise -->
+        <a-entity cursor="fuse:false"
+                  raycaster="objects:.plane;recursive:false" 
+                  ar-raycaster="el:#ar-world"></a-entity>
+        
+        <!-- Separate the cursor appearance.-->
+        <a-entity position="0 0 -0.1"
+                  scale="0.001 0.001 0.001"
+                  geometry="primitive: ring; radiusInner: 0.8; radiusOuter: 1" 
+                  material="color: yellow; shader: flat; transparent:true"></a-entity>
+        
+        <!-- Heads-up text display. -->
+        
+<!--
+        <a-text id="hud" 
+                scale="0.01 0.01 0.01" position="0 -0.025 -0.1" 
+                color="yellow" align="center" 
+                value="Hi there"></a-text>
+-->
+      </a-camera>
+    </a-scene>    
     
-    <paper-slider id="dice-controls" value="100"></paper-slider>
     
     <script>
+      /*
       document.querySelector('a-entity[camera]').addEventListener('componentchanged', function (evt) {
         if (evt.detail.name === 'position') {
           console.log(evt.detail.newData);
@@ -39,6 +78,76 @@
           document.querySelector('#dice').setAttribute('position', evt.detail.newData);
         }
       });
+      */
+      
+      var sc = document.querySelector('a-scene');
+      function showHUD(msg) { sc.querySelector('#hud').setAttribute('value', msg); }
+      
+      function addARRaycasterListeners() {
+        var raycaster = sc.querySelector('[ar-raycaster]');
+        // Note, -intersection is what the raycaster gets; the hit object gets -intersected.
+        raycaster.addEventListener('raycaster-intersection', function (evt) {
+          // Use first hit (which should be nearest).
+          var point = evt.detail.intersections[0].point;
+          var distance = evt.detail.intersections[0].distance;
+          var el = evt.detail.els[0];
+          showHUD('raycaster-intersection ' + distance + '\n' + JSON.stringify(point) + '\n' + el.id /*el.outerHTML*/);
+          if (el.getAttribute('class') === 'plane') { el.setAttribute('opacity', 1.0); }
+          ball.setAttribute('position', point);
+          ball.setAttribute('visible', true);
+        });
+        raycaster.addEventListener('raycaster-intersection-cleared', function (evt) {
+          var el = evt.detail.el;
+          showHUD('raycaster-intersection-cleared\n' + el.outerHTML);
+          if (el.getAttribute('class') === 'plane') { el.setAttribute('opacity', 0.5); }
+          ball.setAttribute('visible', false);
+        });
+      }
+      
+      function addEventListeners() {
+        addARRaycasterListeners();
+        addPlaneListeners();
+      }      
+      
+      function onSceneLoaded() { 
+        var tempScale = new THREE.Vector3();
+        var tempMat4 = new THREE.Matrix4();
+        
+        window.addEventListener('click', function() {
+          // If the cursor has an intersection, place a marker.
+          var cursor = sc.querySelector('[ar-raycaster]').components.cursor;
+          if (cursor.intersection) {
+            var marker = document.createElement('a-box');
+            marker.setAttribute('width', 0.01);
+            marker.setAttribute('depth', 0.01);
+            marker.setAttribute('height', 1);
+            marker.setAttribute('color', 'orange');
+            marker.setAttribute('position', {
+              x: cursor.intersection.point.x, 
+              y: cursor.intersection.point.y + 0.5, 
+              z: cursor.intersection.point.z});
+            sc.appendChild(marker);         
+          }
+          
+          // Show plane info on click.
+          // (may not have arDisplay until tick after loaded)
+          var ardisplay = sc.components['three-ar'].arDisplay;
+          if (!ardisplay) { showHUD('no ardisplay?'); } else {
+            // Old versions of WebARonARKit don't expose getPlanes() correctly.
+            var planes = ardisplay.getPlanes ? ardisplay.getPlanes() : ardisplay.anchors_;
+
+            var keys = Object.keys(sc.components['three-ar-planes'].planes);
+            var msg = planes.length + ' (vs. ' + keys.length + ': ' + keys.join(',') + ')\n\n';
+            showHUD(msg);
+          }
+        });
+        
+        addEventListeners();
+      }
+      
+      if (sc.hasLoaded) { onSceneLoaded(); }
+      else { sc.addEventListener('loaded', onSceneLoaded); }
+      
     </script>
   </body>
 </html>

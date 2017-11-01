@@ -11,7 +11,6 @@ var app = express();
 // http://expressjs.com/en/starter/static-files.html
 //app.use(express.static('public'));
 app.use(express.static(__dirname + '/public'));
-app.use('/bower_components',  express.static(__dirname + '/bower_components'));
 
 // http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (request, response) {
