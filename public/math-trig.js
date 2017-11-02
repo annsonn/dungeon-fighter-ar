@@ -44,8 +44,11 @@ function find_position(deltaZ, deltaX, distance, from) {
 }
 
 function point_intersect_circle(point, circle, radius) {
-  var dx = Math.abs(point.x - circle.x);
-  var dy = Math.abs(point.z - circle.z);
+  //alert(JSON.stringify(point) + ' ' + JSON.stringify(circle) + ' ' + radius);
+  document.getEa-plane'
+  var circleNormalized = circle;
+  var dx = Math.pow(Math.abs(point.x - circleNormalized.x), 2);
+  var dy = Math.pow(Math.abs(point.z - circleNormalized.z), 2);
   return Math.sqrt(dx + dy) < radius;
 }
 
@@ -62,3 +65,12 @@ function find_position_between(from, to, percentOfDistance) {
   
   return find_position(deltaZ, deltaX, newDistance, from);
 };
+
+function normalize(vector) {
+  var length = Math.sqrt(Math.pow(vector.x, 2) + Math.pow(vector.y, 2) + Math.pow(vector.z, 2));
+  return {
+    x: vector.x / length,
+    y: vector.y / length,
+    z: vector.z / length
+  };
+}

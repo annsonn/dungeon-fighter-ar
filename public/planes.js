@@ -2,7 +2,8 @@ var randomColors = ['lightred', 'white', 'lightgreen', 'lightblue'];
 var GAME_STATE = {
   player: 10,
   monster: 10,
-  win: false
+  win: false,
+  lose: false
 };
 
 window.johnDebug = false;
@@ -26,12 +27,28 @@ function raycasterNeedsUpdate() {
 }
 
 function createGameBoard() {
-  return '<a-box width="0.1" height="0.1" depth="0.1" position="-0.25 0.125 -0.75" rotation="0 45 0" color="#EFEFEF" shadow></a-box>' +
-         '<a-cylinder id="game-ring-5-pts" class="board" position="0 0.0078 0" radius="0.20" height="0.001" color="#FF0000" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-4-pts" class="board" position="0 0.0076 0" radius="0.40" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-3-pts" class="board" position="0 0.0074 0" radius="0.60" height="0.001" color="#FF0000" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-2-pts" class="board" position="0 0.0072 0" radius="0.80" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-1-pts" class="board" position="0 0.0070 0" radius="1.00" height="0.001" color="#FF0000" shadow></a-cylinder>';
+  return '<a-cylinder id="game-ring-5-pts" score="5" class="board" position="0 0.0078 0" radius="0.20" height="0.001" color="#FF0000" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-4-pts" score="4" class="board" position="0 0.0076 0" radius="0.40" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-3-pts" score="3" class="board" position="0 0.0074 0" radius="0.60" height="0.001" color="#FF0000" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-2-pts" score="2" class="board" position="0 0.0072 0" radius="0.80" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-1-pts" score="1" class="board" position="0 0.0070 0" radius="1.00" height="0.001" color="#FF0000" shadow></a-cylinder>' +
+    
+        '<a-text scale="1 1 1" position="0 0.01 0" value="5" align="center" color="#FFFFFF">' +
+          '<a-animation attribute="rotation" to="-90 0 0" dur="5" repeat="0"></a-animation>' +
+        '</a-text>'+
+        '<a-text scale="1 1 1" position="-0.3 0.01 0" value="4" align="center" color="#FF0000">' +
+          '<a-animation attribute="rotation" to="-90 0 0" dur="5" repeat="0"></a-animation>' +
+        '</a-text>'+
+        '<a-text scale="1 1 1" position="-0.5 0.01 0" value="3" align="center" color="#FFFFFF">' +
+          '<a-animation attribute="rotation" to="-90 0 0" dur="5" repeat="0"></a-animation>' +
+        '</a-text>'+
+        '<a-text scale="1 1 1" position="-0.7 0.01 0" value="2" align="center" color="#FF0000">' +
+          '<a-animation attribute="rotation" to="-90 0 0" dur="5" repeat="0"></a-animation>' +
+        '</a-text>'+
+        '<a-text scale="1 1 1" position="-0.9 0.01 0" value="1" align="center" color="#FFFFFF">' +
+          '<a-animation attribute="rotation" to="-90 0 0" dur="5" repeat="0"></a-animation>' +
+        '</a-text>'
+    ;
 }
 
 var tempMat4 = new THREE.Matrix4();
@@ -116,7 +133,6 @@ function onAddedPlanes(evt) {
       planeCreated = true;  //Only create the plane once
       var loadingText = document.querySelector("#debug");
       loadingText.setAttribute('class', 'hidden');
-
     
       // Create and append the plane.
       created = true;
@@ -125,6 +141,7 @@ function onAddedPlanes(evt) {
       plane.setAttribute('id', 'plane_' + anchor.identifier);
       plane.setAttribute('class', 'plane');
       plane.setAttribute('height', 0.001);
+      plane.setAttribute('position', '0 0 0');
       plane.setAttribute('material', 'shader:grid;interval:0.1;side:double;opacity:0.5;color:' + colorToUse);
       sc.appendChild(plane);
 
@@ -208,11 +225,8 @@ function onRemovedPlanes(evt) {
   evt.detail.anchors.forEach(function (anchor) {
     var plane = sc.querySelector('#plane_' + anchor.identifier);
     if (plane && plane.parentElement) {
-      // plane.parentElement.removeChild(plane);
-      var dice = document.getElementsByClassName('dice');
-      while (dice.length > 0) {
-        dice[0].parentNode.removeChild(dice[0]);
-      }
+      //plane.parentElement.removeChild(plane);
+      //removeDice();
     }          
   });
 }            
@@ -256,9 +270,10 @@ function clickListener() {
     
     var totalAnimationTime = 3000;
     var fromPosition = cameraPosition;
-    var toPosition = fudgePosition(cursor.intersection.point);
+    var toPosition = cursor.intersection.point;
+    // var toPosition = fudgePosition(cursor.intersection.point);
     
-    var bounceAtPercent = 0.80;
+    var bounceAtPercent = 0.70;
     var bounceDuration = totalAnimationTime * bounceAtPercent;
     var rollDuration = totalAnimationTime - bounceDuration;
     var diceColour = randomColors[Math.floor(Math.random() * randomColors.length)];
@@ -311,65 +326,138 @@ function clickListener() {
     
     sc.appendChild(marker);
     
-    alert("detected hits: " + checkIntersectWithGameboard(toPosition));
-    updateGameStateOnIntersection();
+    var score = getScoreFromIntersectWithGameboard(normalize(toPosition));
+    updateGameStateOnIntersection(score);
   }
    
 }
 
-function updateGameStateOnIntersection() {
+function createEndGameText(msg, color) {
+  document.querySelector('#monster-health').setAttribute('visible', false);
+  document.querySelector('#player-health').setAttribute('visible', false);
+  
+  var value = "value: " + msg + '; font: #optimerBoldFont';
+  var endGameText = document.createElement('a-entity');
+  endGameText.setAttribute('id', 'player-health');
+  endGameText.setAttribute('position', '0 0.1 0');
+  endGameText.setAttribute('material', 'color: ' + color);
+  endGameText.setAttribute('text-geometry', value); 
+  
+  var animation = document.createElement('a-animation');
+  animation.setAttribute('attribute', 'position');
+  animation.setAttribute('to', '0 1 1');
+  animation.setAttribute('dur', '1000');
+  animation.setAttribute('repeat', 'infinite');
+  animation.setAttribute('direction', 'alternate');
+  animation.setAttribute('easing', 'ease-out');
+  endGameText.appendChild(animation);
+  
+  sc.appendChild(endGameText);
+}
+
+function updateGameStateOnIntersection(score) {
   // Show plane info on click.
   // (may not have arDisplay until tick after loaded)
   var ardisplay = sc.components['three-ar'].arDisplay;
-  if (!ardisplay) { 
-    showText('#debug', 'no ardisplay?'); 
-  } else {
-    // Old versions of WebARonARKit don't expose getPlanes() correctly.
-    var planes = ardisplay.getPlanes ? ardisplay.getPlanes() : ardisplay.anchors_;
-    var keys = Object.keys(sc.components['three-ar-planes'].planes);
-    var msg = planes.length + ' (vs. ' + keys.length + ': ' + keys.join(',') + ')\n\n';
+  if (ardisplay) { 
+    if(!healthExists()) {
+      createHealthElements();
+    }
+    if (score > 0) {
+      decreaseMonsterHealth(score,);
+    } else {
+      decreasePlayerHealth(score);
+    }
     
-    showText('#monster-health', 'M:' + decreaseMonsterHealth());
-    showText('#player-health', 'P: ' + decreasePlayerHealth());
-    showText('#debug', '');
+    showText('#monster-health', 'M:' + GAME_STATE.monster);
+    showText('#player-health', 'P: ' + GAME_STATE.player);
+    
+    if (GAME_STATE.win) {
+      createEndGameText('YOU WIN!', 'gold');
+    }
+    
+    if (GAME_STATE.lose) {
+      createEndGameText('YOU LOSE', 'brown');
+    }
   }
 }
 
-function decreaseMonsterHealth() {
-  var newHealth = GAME_STATE.monster - 1;
-  GAME_STATE.monster = newHealth;
-  return newHealth;
+function healthExists() {
+  return document.querySelector('#monster-health') && document.querySelector('#player-health');
 }
 
-function decreasePlayerHealth() {
-  var newHealth = GAME_STATE.player + 1;
-  GAME_STATE.player = newHealth;
-  return newHealth;
+function resetGameState() {
+  GAME_STATE = {
+    player: 10,
+    monster: 10,
+    win: false,
+    lose: false
+  };
+  removeDice();
+}
+
+function removeDice() {
+  var dice = document.getElementsByClassName('dice');
+  while (dice.length > 0) {
+    dice[0].parentNode.removeChild(dice[0]);
+  }
+}
+
+function createHealthElements() {
+  var playerHealth = document.createElement('a-entity');
+  playerHealth.setAttribute('id', 'player-health');
+  playerHealth.setAttribute('scale', '0.5 0.5 0.5');
+  playerHealth.setAttribute('position', '-0.5 0.25 0');
+  playerHealth.setAttribute('material', 'color: blue');
+  sc.appendChild(playerHealth);
+  
+  var monsterHealth = document.createElement('a-entity');
+  monsterHealth.setAttribute('id', 'monster-health');
+  monsterHealth.setAttribute('scale', '0.5 0.5 0.5');
+  monsterHealth.setAttribute('position', '0.5 0.25 0');
+  monsterHealth.setAttribute('material', 'color: red');
+  sc.appendChild(monsterHealth);
+  
+}
+
+function decreaseMonsterHealth(score) {
+  var newHealth = GAME_STATE.monster - score;
+  if (newHealth <= 0) {
+    GAME_STATE.win = true;
+  } else {
+    GAME_STATE.monster = newHealth;
+    return newHealth;
+  }
+}
+
+function decreasePlayerHealth(score) {
+  var newHealth = GAME_STATE.player - score;
+  if (newHealth <= 0) {
+    GAME_STATE.lose = true;
+  } else {
+    GAME_STATE.player = newHealth;
+    return newHealth;
+  }
 }
   
 function showText(selector, msg) {
   var sc = AFRAME.scenes[0];
-  sc.querySelector(selector).setAttribute('value', msg); 
+  var value = "value: " + msg + '; font: #optimerBoldFont';
+  sc.querySelector(selector).setAttribute('text-geometry', value); 
 }
 
-function checkIntersectWithGameboard(point) {
-  var getPositionFromAttribute = function(attribute) {
-    var attrArray = attribute.split(' ');
-    return {
-      x: attrArray[0],
-      y: attrArray[1],
-      z: attrArray[2]
-    };
-  }
+function getScoreFromIntersectWithGameboard(point) {
+  var boards = document.getElementsByClassName('board');
+  var scores = [];
+  [].forEach.call(boards, function (board) {
+    var id = board.getAttribute('id');
+    var radius = parseFloat(board.getAttribute('radius'));
+    var position = board.getAttribute('position');
+    var score = board.getAttribute('score');
+    if (point_intersect_circle(point, position, radius)) {
+      scores.push(parseInt(score));
+    }
+  });
   
-  var sc = AFRAME.scenes[0];
-  var boards = sc.querySelector('.board');
-  var hits = [];
-  for (var i=0; i < boards.length-1; i++) {
-    var radius = boards[i].getAttribute('position');
-    var boardPosition = getPositionFromAttribute(boards[i].getAttribute('position'));
-    hits.push(point_intersect_circle(point, boardPosition, radius));
-  }
-  
-  return hits;
+  return scores.length > 0 ? Math.max.apply(null, scores) : 0;
 }
