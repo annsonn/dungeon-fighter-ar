@@ -45,7 +45,6 @@ function find_position(deltaZ, deltaX, distance, from) {
 
 function point_intersect_circle(point, circle, radius) {
   //alert(JSON.stringify(point) + ' ' + JSON.stringify(circle) + ' ' + radius);
-  document.getEa-plane'
   var circleNormalized = circle;
   var dx = Math.pow(Math.abs(point.x - circleNormalized.x), 2);
   var dy = Math.pow(Math.abs(point.z - circleNormalized.z), 2);
