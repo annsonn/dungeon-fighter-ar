@@ -138,7 +138,7 @@ function onAddedPlanes(evt) {
       created = true;
       colorToUse = randomColors[Math.floor(Math.random() * randomColors.length)];
       plane = document.createElement('a-plane');
-      plane.setAttribute('id', 'plane_' + anchor.identifier);
+      plane.setAttribute('id', 'plane');
       plane.setAttribute('class', 'plane');
       plane.setAttribute('height', 0.001);
       plane.setAttribute('position', '0 0 0');
@@ -273,7 +273,7 @@ function clickListener() {
     var toPosition = cursor.intersection.point;
     // var toPosition = fudgePosition(cursor.intersection.point);
     
-    var bounceAtPercent = 0.70;
+    var bounceAtPercent = 0.80;
     var bounceDuration = totalAnimationTime * bounceAtPercent;
     var rollDuration = totalAnimationTime - bounceDuration;
     var diceColour = randomColors[Math.floor(Math.random() * randomColors.length)];
@@ -326,36 +326,38 @@ function clickListener() {
     
     sc.appendChild(marker);
     
-    var score = getScoreFromIntersectWithGameboard(normalize(toPosition));
-    updateGameStateOnIntersection(score);
+    updateGameStateOnIntersection(getScoreFromIntersectWithGameboard(toPosition));
   }
    
 }
 
 function createEndGameText(msg, color) {
-  document.querySelector('#monster-health').setAttribute('visible', false);
-  document.querySelector('#player-health').setAttribute('visible', false);
-  
-  var value = "value: " + msg + '; font: #optimerBoldFont';
-  var endGameText = document.createElement('a-entity');
-  endGameText.setAttribute('id', 'player-health');
-  endGameText.setAttribute('position', '0 0.1 0');
-  endGameText.setAttribute('material', 'color: ' + color);
-  endGameText.setAttribute('text-geometry', value); 
-  
-  var animation = document.createElement('a-animation');
-  animation.setAttribute('attribute', 'position');
-  animation.setAttribute('to', '0 1 1');
-  animation.setAttribute('dur', '1000');
-  animation.setAttribute('repeat', 'infinite');
-  animation.setAttribute('direction', 'alternate');
-  animation.setAttribute('easing', 'ease-out');
-  endGameText.appendChild(animation);
-  
-  sc.appendChild(endGameText);
+  if (!document.querySelector('#endGameText')) {
+    document.querySelector('#monster-health').setAttribute('visible', false);
+    document.querySelector('#player-health').setAttribute('visible', false);
+
+    var value = "value: " + msg + '; font: #optimerBoldFont';
+    var endGameText = document.createElement('a-entity');
+    endGameText.setAttribute('id', 'endGameText');
+    endGameText.setAttribute('position', '0 0.1 0');
+    endGameText.setAttribute('material', 'color: ' + color);
+    endGameText.setAttribute('text-geometry', value); 
+
+    var animation = document.createElement('a-animation');
+    animation.setAttribute('attribute', 'position');
+    animation.setAttribute('to', '0 1 1');
+    animation.setAttribute('dur', '1000');
+    animation.setAttribute('repeat', 'infinite');
+    animation.setAttribute('direction', 'alternate');
+    animation.setAttribute('easing', 'ease-out');
+    endGameText.appendChild(animation);
+
+    sc.appendChild(endGameText);
+  }
 }
 
 function updateGameStateOnIntersection(score) {
+  //alert(score);
   // Show plane info on click.
   // (may not have arDisplay until tick after loaded)
   var ardisplay = sc.components['three-ar'].arDisplay;
@@ -363,8 +365,9 @@ function updateGameStateOnIntersection(score) {
     if(!healthExists()) {
       createHealthElements();
     }
+    
     if (score > 0) {
-      decreaseMonsterHealth(score,);
+      decreaseMonsterHealth(score);
     } else {
       decreasePlayerHealth(score);
     }
@@ -372,13 +375,17 @@ function updateGameStateOnIntersection(score) {
     showText('#monster-health', 'M:' + GAME_STATE.monster);
     showText('#player-health', 'P: ' + GAME_STATE.player);
     
-    if (GAME_STATE.win) {
-      createEndGameText('YOU WIN!', 'gold');
+    if (GAME_STATE.win || GAME_STATE.lose) {
+      if (GAME_STATE.win) {
+        createEndGameText('YOU WIN!', 'gold');
+      }
+
+      if (GAME_STATE.lose) {
+        createEndGameText('YOU LOSE', 'brown');
+      }
+      setTimeout(resetGameState, 10000);
     }
     
-    if (GAME_STATE.lose) {
-      createEndGameText('YOU LOSE', 'brown');
-    }
   }
 }
 
@@ -421,40 +428,35 @@ function createHealthElements() {
 }
 
 function decreaseMonsterHealth(score) {
-  var newHealth = GAME_STATE.monster - score;
-  if (newHealth <= 0) {
+  GAME_STATE.monster = GAME_STATE.monster - score;
+  if (GAME_STATE.monster <= 0) {
     GAME_STATE.win = true;
-  } else {
-    GAME_STATE.monster = newHealth;
-    return newHealth;
   }
 }
 
 function decreasePlayerHealth(score) {
-  var newHealth = GAME_STATE.player - score;
-  if (newHealth <= 0) {
+  GAME_STATE.player = GAME_STATE.player - score;
+  if (GAME_STATE.player <= 0) {
     GAME_STATE.lose = true;
-  } else {
-    GAME_STATE.player = newHealth;
-    return newHealth;
   }
 }
   
 function showText(selector, msg) {
-  var sc = AFRAME.scenes[0];
   var value = "value: " + msg + '; font: #optimerBoldFont';
-  sc.querySelector(selector).setAttribute('text-geometry', value); 
+  document.querySelector(selector).setAttribute('text-geometry', value); 
 }
 
 function getScoreFromIntersectWithGameboard(point) {
-  var boards = document.getElementsByClassName('board');
+  var boards = document.querySelectorAll('.board');
+  
+  // var position = document.querySelector('a-plane').getAttribute('position');
   var scores = [];
-  [].forEach.call(boards, function (board) {
+  boards.forEach(function (board) {
     var id = board.getAttribute('id');
     var radius = parseFloat(board.getAttribute('radius'));
     var position = board.getAttribute('position');
     var score = board.getAttribute('score');
-    if (point_intersect_circle(point, position, radius)) {
+    if (point_intersect_circle(normalize(point), position, radius)) {
       scores.push(parseInt(score));
     }
   });
