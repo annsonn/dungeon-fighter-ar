@@ -7,6 +7,8 @@
     <script src="https://aframe.io/releases/0.6.1/aframe.min.js"></script>
     <script src="https://rawgit.com/google-ar/three.ar.js/master/dist/three.ar.js"></script>
     <script src="https://rawgit.com/chenzlabs/aframe-ar/master/dist/aframe-ar.js"></script>
+    
+    <script src="math-trig.js"></script>
 
     <!-- Include XZ grid shader. -->
     <script src="grid-shader.js"></script>
@@ -27,25 +29,36 @@
             this.el.setAttribute('position', {y:0.5});  
           }
         }
-      });            
+      });
     </script>    
 
     <!-- Include planes handling example code. -->
     <script src="planes.js"></script>
     
     <style>
-
+      .hidden {
+        display: none !important;
+      }
+      
+      #debug {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: auto;
+        font-size: 3em;
+        font-family: Arial;
+        width: 60vw;
+        height: 30vh;
+        text-align: center;
+        color: white;
+      }
     </style> 
     
     <a-scene ar>
       <!-- When we have a raycaster hit, we use this ball to show where. -->
       <a-sphere id="ball" radius="0.01" position="0 0.005 -0.5"></a-sphere>
-      
-      <a-assets>
-        <a-asset-item id="dice-obj" src="https://cdn.glitch.com/4bb2aa19-b5ca-49c7-8a0d-97dd920ef037%2Fdice.obj?1509565004898"></a-asset-item>
-        <a-asset-item id="dice-mtl" src="https://cdn.glitch.com/4bb2aa19-b5ca-49c7-8a0d-97dd920ef037%2Fdice.mtl?1509565004919"></a-asset-item>
-      </a-assets>
-      <a-entity id="original-dice" class="dice" obj-model="obj: #dice-obj; mtl: #dice-mtl" position="0 0.005 -0.5" scale="0.1 0.1 0.1"></a-entity>
       
       <a-camera>
         <!-- A hit from AR, rather than A-Frame objects, hits this entity. -->
@@ -60,19 +73,27 @@
         <!-- Separate the cursor appearance.-->
         <a-entity position="0 0 -0.1"
                   scale="0.001 0.001 0.001"
-                  geometry="primitive: ring; radiusInner: 0.8; radiusOuter: 1" 
+                  geometry="primitive: ring; radiusInner: 0.0; radiusOuter: 1" 
                   material="color: yellow; shader: flat; transparent:true"></a-entity>
+      
         
         <!-- Heads-up text display. -->
+        <a-text id="monster-health" 
+                scale="0.03 0.03 0.03" position="0.025 -0.03 -0.1" 
+                color="red" align="center" 
+                value=""></a-text>
         
-<!--
-        <a-text id="hud" 
-                scale="0.01 0.01 0.01" position="0 -0.025 -0.1" 
-                color="yellow" align="center" 
-                value="Hi there"></a-text>
--->
+        <a-text id="player-health" 
+                scale="0.03 0.03 0.03" position="-0.025 -0.03 -0.1" 
+                color="blue" align="center" 
+                value=""></a-text>
+
       </a-camera>
     </a-scene>    
+    
+    <div id="debug">
+      Move Around to Detect Board
+    </div>
     
     
     <script>

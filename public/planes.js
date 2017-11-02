@@ -1,8 +1,15 @@
-var randomColors = ['red', 'orange', /* 'yellow', */ 'green', 'blue', 'violet'];
+var randomColors = ['lightred', 'white', 'lightgreen', 'lightblue'];
+var GAME_STATE = {
+  player: 10,
+  monster: 10,
+  win: false
+};
 
 window.johnDebug = false;
 var raycasterUpdateNeeded = false;
 var raycasterInterval;
+var clickHandling = false
+var planeCreated = false;
 
 function raycasterNeedsUpdate() {
   raycasterUpdateNeeded = true;
@@ -20,11 +27,11 @@ function raycasterNeedsUpdate() {
 
 function createGameBoard() {
   return '<a-box width="0.1" height="0.1" depth="0.1" position="-0.25 0.125 -0.75" rotation="0 45 0" color="#EFEFEF" shadow></a-box>' +
-         '<a-cylinder id="game-ring-5-pts" position="0 0.0078 0" radius="0.20" height="0.001" color="#FF0000" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-4-pts" position="0 0.0076 0" radius="0.40" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-3-pts" position="0 0.0074 0" radius="0.60" height="0.001" color="#FF0000" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-2-pts" position="0 0.0072 0" radius="0.80" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
-         '<a-cylinder id="game-ring-1-pts" position="0 0.0070 0" radius="1.00" height="0.001" color="#FF0000" shadow></a-cylinder>';
+         '<a-cylinder id="game-ring-5-pts" class="board" position="0 0.0078 0" radius="0.20" height="0.001" color="#FF0000" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-4-pts" class="board" position="0 0.0076 0" radius="0.40" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-3-pts" class="board" position="0 0.0074 0" radius="0.60" height="0.001" color="#FF0000" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-2-pts" class="board" position="0 0.0072 0" radius="0.80" height="0.001" color="#FFFFFF" shadow></a-cylinder>' +
+         '<a-cylinder id="game-ring-1-pts" class="board" position="0 0.0070 0" radius="1.00" height="0.001" color="#FF0000" shadow></a-cylinder>';
 }
 
 var tempMat4 = new THREE.Matrix4();
@@ -87,10 +94,6 @@ function onUpdatedPlanes(evt) {
       + '\nrotation x: ' + plane.tempRotation.x
       + '\nrotation y: ' + plane.tempRotation.y
       + '\nrotation z: ' + plane.tempRotation.z
-      // Currently, scale is always 1... 
-      //+ '\nscale x: ' + plane.getAttribute('scale').x
-      //+ '\nscale y: ' + plane.getAttribute('scale').y
-      //+ '\nscale z: ' + plane.getAttribute('scale').z
       });
     }
     
@@ -103,7 +106,6 @@ function onUpdatedPlanes(evt) {
   });                  
 }
 
-var planeCreated = false;
 function onAddedPlanes(evt) {
   var sc = AFRAME.scenes[0];
   evt.detail.anchors.forEach(function (anchor) {
@@ -112,17 +114,18 @@ function onAddedPlanes(evt) {
     var plane = sc.querySelector('#plane_' + anchor.identifier);
     if (!plane && !planeCreated) {
       planeCreated = true;  //Only create the plane once
+      var loadingText = document.querySelector("#debug");
+      loadingText.setAttribute('class', 'hidden');
+
+    
       // Create and append the plane.
       created = true;
       colorToUse = randomColors[Math.floor(Math.random() * randomColors.length)];
-      plane = document.createElement('a-entity');
+      plane = document.createElement('a-plane');
       plane.setAttribute('id', 'plane_' + anchor.identifier);
       plane.setAttribute('class', 'plane');
       plane.setAttribute('height', 0.001);
-      //plane.setAttribute('geometry', 'primitive: plane;');
-      //plane.setAttribute('material', 'shader:flat; src: url(https://cdn.glitch.com/4f6957bd-cb74-44f6-808c-17ff6a8fa316%2Fgrass.jpg?1509560768477);repeat: 300 300;');
       plane.setAttribute('material', 'shader:grid;interval:0.1;side:double;opacity:0.5;color:' + colorToUse);
-
       sc.appendChild(plane);
 
       plane.insertAdjacentHTML('beforeend',                   
@@ -189,10 +192,6 @@ function onAddedPlanes(evt) {
       + '\nrotation x: ' + plane.tempRotation.x
       + '\nrotation y: ' + plane.tempRotation.y
       + '\nrotation z: ' + plane.tempRotation.z
-      // Currently, scale is always 1... 
-      //+ '\nscale x: ' + plane.getAttribute('scale').x
-      //+ '\nscale y: ' + plane.getAttribute('scale').y
-      //+ '\nscale z: ' + plane.getAttribute('scale').z
       });
     }
 
@@ -209,10 +208,10 @@ function onRemovedPlanes(evt) {
   evt.detail.anchors.forEach(function (anchor) {
     var plane = sc.querySelector('#plane_' + anchor.identifier);
     if (plane && plane.parentElement) {
-      plane.parentElement.removeChild(plane);
-      var dice = document.getElementsByClassName('dice').childNodes;
-      for (var i=dice.length; i>=0; i--) {
-        dice[i].parentNode.removeChild(dice[i]);
+      // plane.parentElement.removeChild(plane);
+      var dice = document.getElementsByClassName('dice');
+      while (dice.length > 0) {
+        dice[0].parentNode.removeChild(dice[0]);
       }
     }          
   });
@@ -226,43 +225,151 @@ function addPlaneListeners() {
   sc.addEventListener('anchorsremoved', onRemovedPlanes);
 }
 
-var numDice = 0;
+function fudgePosition(position) {
+  var maxMissDistance = 0.3; 
+  
+  var randomXDistance = Math.random() * maxMissDistance;
+  var randomZDistance = Math.random() * maxMissDistance;
+  if (Math.random() > 0.5) {
+    position.x = position.x + randomXDistance;
+  } else {
+    position.x = position.x - randomXDistance;
+  }
+  
+  if (Math.random() > 0.5) {
+    position.z = position.z + randomXDistance;
+  } else {
+    position.z = position.z - randomXDistance;
+  }
+  
+  return position;
+}
+
+
+// Handling Throw
 function clickListener() {
   var sc = AFRAME.scenes[0];
   // If the cursor has an intersection, place a marker.
   var cursor = sc.querySelector('[ar-raycaster]').components.cursor;
-  if (cursor.intersection) {
-    var marker = document.getElementById('original-dice').cloneNode(true);
-    marker.setAttribute('id', 'dice-' + numDice);
-    marker.setAttribute('position', cameraPosition.x + ' ' + cameraPosition.y + ' ' + cameraPosition.z);
+  if (cursor.intersection && !clickHandling) {
+    clickHandling = true;
     
+    var totalAnimationTime = 3000;
+    var fromPosition = cameraPosition;
+    var toPosition = fudgePosition(cursor.intersection.point);
+    
+    var bounceAtPercent = 0.80;
+    var bounceDuration = totalAnimationTime * bounceAtPercent;
+    var rollDuration = totalAnimationTime - bounceDuration;
+    var diceColour = randomColors[Math.floor(Math.random() * randomColors.length)];
+    
+    setTimeout(function(){ clickHandling = false; }, totalAnimationTime);
+    
+    var marker = document.createElement('a-box');
+    marker.setAttribute('class', "dice");
+    marker.setAttribute('width', "0.1");
+    marker.setAttribute('depth', "0.1");
+    marker.setAttribute('height', "0.1");
+    marker.setAttribute('color', diceColour);
+    marker.setAttribute('position', fromPosition.x + ' ' + fromPosition.y + ' ' + fromPosition.z);
+    
+    var bouncePosition = find_position_between(fromPosition, toPosition, bounceAtPercent);
+    
+    //alert(JSON.stringify(fromPosition) + JSON.stringify(toPosition) + JSON.stringify(bouncePosition));
+    
+    // Creating animation to move dice to cursor from camera position 
     var throwAnimation = document.createElement("a-animation");
         throwAnimation.setAttribute("attribute","position");
-        throwAnimation.setAttribute("to", cursor.intersection.point.x + ' ' + (cursor.intersection.point.y + 0.05)  + ' ' + cursor.intersection.point.z);
-        throwAnimation.setAttribute("dur","1000");
+        throwAnimation.setAttribute("from", fromPosition.x + ' ' + fromPosition.y  + ' ' + fromPosition.z);
+        throwAnimation.setAttribute("to", bouncePosition.x + ' ' + (toPosition.y + 0.05)  + ' ' + bouncePosition.z);
+        throwAnimation.setAttribute("dur", bounceDuration + '');
         throwAnimation.setAttribute("repeat","0");
     marker.appendChild(throwAnimation);
     
-    var rotateAnimation = document.createElement("a-animation");
-        rotateAnimation.setAttribute("attribute","rotation");
-        rotateAnimation.setAttribute("to","0 360 360");
-        rotateAnimation.setAttribute("dur","1000");
-    marker.appendChild(rotateAnimation);
+    var rollAnimation = document.createElement("a-animation");
+        rollAnimation.setAttribute("attribute","position");
+        rollAnimation.setAttribute("from", bouncePosition.x + ' ' + (toPosition.y + 0.05)  + ' ' + bouncePosition.z);
+        rollAnimation.setAttribute("to", toPosition.x + ' ' + (toPosition.y + 0.05)  + ' ' + toPosition.z);
+        rollAnimation.setAttribute("begin", bounceDuration + '');
+        rollAnimation.setAttribute("dur", rollDuration + '');
+        rollAnimation.setAttribute("repeat","0");
+    marker.appendChild(rollAnimation);
     
-    sc.appendChild(marker);         
+    // Creating animation to rotate dice
+    var rotateAnimation1 = document.createElement("a-animation");
+        rotateAnimation1.setAttribute("attribute", "rotation");
+        rotateAnimation1.setAttribute("to", "0 360 360");
+        rotateAnimation1.setAttribute("dur", bounceDuration + '');
+    marker.appendChild(rotateAnimation1);
+    
+    var rotateAnimation2 = document.createElement("a-animation");
+        rotateAnimation2.setAttribute("attribute", "rotation");
+        rotateAnimation2.setAttribute("to", "360 360 0");
+        rotateAnimation2.setAttribute("begin", bounceDuration + '');
+        rotateAnimation2.setAttribute("dur", rollDuration + '');
+    marker.appendChild(rotateAnimation2);
+    
+    sc.appendChild(marker);
+    
+    alert("detected hits: " + checkIntersectWithGameboard(toPosition));
+    updateGameStateOnIntersection();
   }
+   
+}
 
-  /*
+function updateGameStateOnIntersection() {
   // Show plane info on click.
   // (may not have arDisplay until tick after loaded)
   var ardisplay = sc.components['three-ar'].arDisplay;
-  if (!ardisplay) { showHUD('no ardisplay?'); } else {
+  if (!ardisplay) { 
+    showText('#debug', 'no ardisplay?'); 
+  } else {
     // Old versions of WebARonARKit don't expose getPlanes() correctly.
     var planes = ardisplay.getPlanes ? ardisplay.getPlanes() : ardisplay.anchors_;
-
     var keys = Object.keys(sc.components['three-ar-planes'].planes);
     var msg = planes.length + ' (vs. ' + keys.length + ': ' + keys.join(',') + ')\n\n';
-    showHUD(msg);
-    */
+    
+    showText('#monster-health', 'M:' + decreaseMonsterHealth());
+    showText('#player-health', 'P: ' + decreasePlayerHealth());
+    showText('#debug', '');
   }
-//function showHUD(msg) { sc.querySelector('#hud').setAttribute('value', msg); }
+}
+
+function decreaseMonsterHealth() {
+  var newHealth = GAME_STATE.monster - 1;
+  GAME_STATE.monster = newHealth;
+  return newHealth;
+}
+
+function decreasePlayerHealth() {
+  var newHealth = GAME_STATE.player + 1;
+  GAME_STATE.player = newHealth;
+  return newHealth;
+}
+  
+function showText(selector, msg) {
+  var sc = AFRAME.scenes[0];
+  sc.querySelector(selector).setAttribute('value', msg); 
+}
+
+function checkIntersectWithGameboard(point) {
+  var getPositionFromAttribute = function(attribute) {
+    var attrArray = attribute.split(' ');
+    return {
+      x: attrArray[0],
+      y: attrArray[1],
+      z: attrArray[2]
+    };
+  }
+  
+  var sc = AFRAME.scenes[0];
+  var boards = sc.querySelector('.board');
+  var hits = [];
+  for (var i=0; i < boards.length-1; i++) {
+    var radius = boards[i].getAttribute('position');
+    var boardPosition = getPositionFromAttribute(boards[i].getAttribute('position'));
+    hits.push(point_intersect_circle(point, boardPosition, radius));
+  }
+  
+  return hits;
+}
