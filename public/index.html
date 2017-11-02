@@ -8,6 +8,7 @@
     <script src="https://rawgit.com/google-ar/three.ar.js/master/dist/three.ar.js"></script>
     <script src="https://rawgit.com/chenzlabs/aframe-ar/master/dist/aframe-ar.js"></script>
     
+    <script src="text-geometry.js"></script>
     <script src="math-trig.js"></script>
 
     <!-- Include XZ grid shader. -->
@@ -49,14 +50,38 @@
         margin: auto;
         font-size: 3em;
         font-family: Arial;
-        width: 60vw;
+        width: 100vw;
         height: 30vh;
         text-align: center;
         color: white;
       }
+      
+      #debug-wrapper {
+        display: flex;
+        flex-direction: row;
+        align-content: center;
+      }
+      
+      #debug span {
+        margin-bottom: 20px;
+      }
+      
+      .img-wrap {
+        height: 100%;
+        display: flex;
+        flex: 1;
+      }
+      
+      .img-wrap img {
+        height: 100%;
+        width: 100%;
+      }
     </style> 
     
     <a-scene ar>
+      <a-assets>
+        <a-asset-item id="optimerBoldFont" src="https://rawgit.com/mrdoob/three.js/dev/examples/fonts/optimer_bold.typeface.json"></a-asset-item>
+      </a-assets>
       <!-- When we have a raycaster hit, we use this ball to show where. -->
       <a-sphere id="ball" radius="0.01" position="0 0.005 -0.5"></a-sphere>
       
@@ -76,23 +101,19 @@
                   geometry="primitive: ring; radiusInner: 0.0; radiusOuter: 1" 
                   material="color: yellow; shader: flat; transparent:true"></a-entity>
       
-        
-        <!-- Heads-up text display. -->
-        <a-text id="monster-health" 
-                scale="0.03 0.03 0.03" position="0.025 -0.03 -0.1" 
-                color="red" align="center" 
-                value=""></a-text>
-        
-        <a-text id="player-health" 
-                scale="0.03 0.03 0.03" position="-0.025 -0.03 -0.1" 
-                color="blue" align="center" 
-                value=""></a-text>
-
       </a-camera>
     </a-scene>    
     
     <div id="debug">
-      Move Around to Detect Board
+      <span>Move Around to Detect Board</span>
+      <div id="debug-wrapper">
+        <div class="img-wrap">
+          <img id="not-found" src="https://cdn.glitch.com/4bb2aa19-b5ca-49c7-8a0d-97dd920ef037%2Floading-not-found?1509649988487"/>
+        </div>
+        <div class="img-wrap">
+          <img id="found" src="https://cdn.glitch.com/4bb2aa19-b5ca-49c7-8a0d-97dd920ef037%2Floading-found?1509649989061"/>
+        </div>
+      </div>
     </div>
     
     
