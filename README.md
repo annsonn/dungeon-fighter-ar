@@ -1,6 +1,16 @@
 Dungeon Fighter AR!
 =========================
 
+This was a hackathon projection to try to build something with WebARonARKit and WebARonARCore.
+
+To demo this app you will need install an experimental browser on your mobile device.
+`WebARonARKit` - https://github.com/google-ar/WebARonARKit
+`WebARonARCore` - https://github.com/google-ar/WebARonARCore
+
+The application is built ontop of an experimental version of `three.ar.js` - https://github.com/google-ar/three.ar.js
+As well as experimental version of the popular VR framework `AFrame` - https://github.com/chenzlabs/aframe-ar
+
+
 Click `Show` in the header to see your app live. Updates to your code will instantly deploy and update live.
 
 **Glitch** is the friendly commmunity where you'll build the app of your dreams. Glitch lets you instantly create, remix, edit, and host an app, bot or site, and you can invite collaborators or helpers to simultaneously edit code with you.
@@ -20,7 +30,6 @@ On the back-end,
 - safely store app secrets in `.env` (nobody can see this but you and people you invite)
 
 
-Made by [Fog Creek](https://fogcreek.com/)
 -------------------
 
 \ ゜o゜)ノ
